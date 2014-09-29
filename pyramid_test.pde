@@ -2,15 +2,15 @@ import unlekker.modelbuilder.*;
 
 UGeometry model;
 
-int baseSquareSize;
-int thickness;
+int baseProportion;
+int wallThickness;
 int gridSize;
 
 void setup() {
   size(800,800,P3D);
   
-  baseSquareSize = 100;
-  thickness = 7;
+  baseProportion = 100;
+  wallThickness = 7;
   gridSize = 4;
   
   build();
@@ -30,86 +30,80 @@ void draw() {
   model.draw(this);
 }
 
-void drawPyramid(int t, float a) {  
+void drawPyramid(int pyrSize, float peakAngle) {  
   // the pyramid has 4 sides, each drawn as a separate triangle made of 3 vertices
   // the parameter "t" determines the size (height?) of the pyramid
   
-  float h = zPoint(t, a); // (t)*tan(radians(a));
+  float peak = pyrSize * tan(radians(peakAngle)); // where in space it should go based on the angle
+  UVec3 peakPt = new UVec3(0, 0, peak); // top of the pyramid
+  
+  // four corners
+  UVec3 ptA = new UVec3(-pyrSize, -pyrSize, 0);
+  UVec3 ptB = new UVec3(pyrSize, -pyrSize, 0);
+  UVec3 ptC = new UVec3(pyrSize, pyrSize, 0);
+  UVec3 ptD = new UVec3(-pyrSize, pyrSize, 0);
+  
+  UVec3[][] faces = {{ptA, ptB, peakPt},
+                     {ptB, ptC, peakPt},
+                     {ptC, ptD, peakPt},
+                     {ptD, ptA, peakPt}};
   
   model.beginShape(TRIANGLES);
-  
-  println("t: "+t);
-  println("baseSquareSize: "+baseSquareSize);
-  
-  UVec3[] s1 = {new UVec3(-t,-t,-baseSquareSize), new UVec3( t,-t,-baseSquareSize), new UVec3(0, 0, h)};
-  UVec3[] s2 = {new UVec3(t,-t,-baseSquareSize), new UVec3(t, t,-baseSquareSize), new UVec3(0, 0, h)};
-  UVec3[] s3 = {new UVec3(t, t,-baseSquareSize), new UVec3(-t, t,-baseSquareSize), new UVec3(0, 0, h)};
-  UVec3[] s4 = {new UVec3(-t, t,-baseSquareSize), new UVec3(-t,-t,-baseSquareSize), new UVec3(0, 0, h)};
-  
-  model.addFace(s1);
-  model.addFace(s2);
-  model.addFace(s3);
-  model.addFace(s4);
-  model.endShape();
+  for (int i = 0; i < faces.length; i++) {
+    model.addFace(faces[i]);
+  }
+  model.endShape();  
 }
 
-void drawBase(int t) { 
-  UGeometry r1, r2, r3, r4;
-  UVec3 pos1 = new UVec3(0, -baseSquareSize+thickness, -baseSquareSize);
-  r1 = UPrimitive.rect(baseSquareSize, thickness);
-  r1.translate(pos1);
+void drawBase() {
+  UGeometry rect1, rect2, rect3, rect4; // base is made of 4 rectangles that cap off the bottoms of the pyramids
   
-  UVec3 pos2 = new UVec3(0, baseSquareSize-thickness, -baseSquareSize);
-  r2 = UPrimitive.rect(baseSquareSize, thickness);
-  r2.translate(pos2);
+  UVec3 pos1 = new UVec3(0, -baseProportion+wallThickness, 0);
+  rect1 = UPrimitive.rect(baseProportion, wallThickness);
+  rect1.translate(pos1);
   
-  UVec3 pos3 = new UVec3(baseSquareSize-thickness, 0, -baseSquareSize);
-  r3 = UPrimitive.rect(thickness, baseSquareSize);
-  r3.translate(pos3);
+  UVec3 pos2 = new UVec3(0, baseProportion-wallThickness, 0);
+  rect2 = UPrimitive.rect(baseProportion, wallThickness);
+  rect2.translate(pos2);
   
-  UVec3 pos4 = new UVec3(-baseSquareSize+thickness, 0, -baseSquareSize);
-  r4 = UPrimitive.rect(thickness, baseSquareSize);
-  r4.translate(pos4);
+  UVec3 pos3 = new UVec3(baseProportion-wallThickness, 0, 0);
+  rect3 = UPrimitive.rect(wallThickness, baseProportion);
+  rect3.translate(pos3);
+  
+  UVec3 pos4 = new UVec3(-baseProportion+wallThickness, 0, 0);
+  rect4 = UPrimitive.rect(wallThickness, baseProportion);
+  rect4.translate(pos4);
+  
+  model.add(rect1);
+  model.add(rect2);
+  model.add(rect3);
+  model.add(rect4);
+}
 
-  model.add(r1);
-  model.add(r2);
-  model.add(r3);
-  model.add(r4);
+int gridOffset(int d) {
+  return (baseProportion-wallThickness*2)*2*d;
+}
+
+void build() {
+  model = new UGeometry();
+  for (int x = 0; x < gridSize; x++) {
+    for (int y = 0; y < gridSize; y++) {
+      float randAngle = (pow(random(40, 65), 2))/65;
+      // steepness of the pyramd, using exponents to create more extreme height variation
+
+      model.translate(gridOffset(x), gridOffset(y), 0);
+      drawPyramid(baseProportion, randAngle);
+      drawPyramid(baseProportion - (wallThickness*2), randAngle); //FIX the angle
+      drawBase();
+      model.translate(gridOffset(-x), gridOffset(-y), 0); // reset it back to the center
+    }
+  }
 }
 
 public void keyPressed() {
   if(key=='s') {
     model.writeSTL(this, "Pyramids.stl");
     println("STL written");
-  }
-}
-
-int gridOffset(int d) {
-  return (baseSquareSize-thickness*2)*2*d;
-}
-
-float zPoint(int baseWidth, float angle) {
-  println("angle in degrees: "+angle);
-  println("angle in radians: "+radians(angle));
-  println("tan of the radians: "+tan(radians(angle)));
-  println("baseWidth: "+baseWidth);
-  return (baseWidth)*tan(radians(angle));
-}
-
-
-void build() {
-  model = new UGeometry();
-  for (int x=0; x<gridSize; x++) {
-    for (int y=0; y<gridSize; y++) {
-      float randAngle = (pow(random(65), 2))/65;
-      // steepness of the pyramd, using exponents to create more extreme variation, capped at 65 so it doesn't get too steep
-
-      model.translate(gridOffset(x), gridOffset(y), 0);
-      drawPyramid(baseSquareSize, randAngle);
-      drawPyramid(baseSquareSize - (thickness*2), randAngle); //FIX the angle
-      drawBase(baseSquareSize);
-      model.translate(gridOffset(-x), gridOffset(-y), 0); // reset it back to the center
-    }
   }
 }
 
