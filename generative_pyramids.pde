@@ -32,7 +32,6 @@ void draw() {
 
 void drawPyramid(int pyrSize, float peakAngle) {  
   // the pyramid has 4 sides, each drawn as a separate triangle made of 3 vertices
-  // the parameter "t" determines the size (height?) of the pyramid
   
   float peak = pyrSize * tan(radians(peakAngle)); // where in space it should go based on the angle
   UVec3 peakPt = new UVec3(0, 0, peak); // top of the pyramid
@@ -56,44 +55,37 @@ void drawPyramid(int pyrSize, float peakAngle) {
 }
 
 void drawBase() {
-  UGeometry rect1, rect2, rect3, rect4; // base is made of 4 rectangles that cap off the bottoms of the pyramids
+  // base is made of 4 rectangles that cap off the bottoms of the pyramids, connecting the inner and the outer
   
-  UVec3 pos1 = new UVec3(0, -baseProportion+wallThickness, 0);
-  rect1 = UPrimitive.rect(baseProportion, wallThickness);
-  rect1.translate(pos1);
-  
-  UVec3 pos2 = new UVec3(0, baseProportion-wallThickness, 0);
-  rect2 = UPrimitive.rect(baseProportion, wallThickness);
-  rect2.translate(pos2);
-  
-  UVec3 pos3 = new UVec3(baseProportion-wallThickness, 0, 0);
-  rect3 = UPrimitive.rect(wallThickness, baseProportion);
-  rect3.translate(pos3);
-  
-  UVec3 pos4 = new UVec3(-baseProportion+wallThickness, 0, 0);
-  rect4 = UPrimitive.rect(wallThickness, baseProportion);
-  rect4.translate(pos4);
-  
-  model.add(rect1);
-  model.add(rect2);
-  model.add(rect3);
-  model.add(rect4);
+  UGeometry[] rectangles = {UPrimitive.rect(baseProportion, wallThickness),
+                            UPrimitive.rect(baseProportion, wallThickness),
+                            UPrimitive.rect(wallThickness, baseProportion),
+                            UPrimitive.rect(wallThickness, baseProportion)};
+                            
+  // UPrimitive's rectangles only take a width and a height, so to position them in space we need to translate                   
+  UVec3 positions[] = {new UVec3(0, -baseProportion + wallThickness, 0),
+                       new UVec3(0, baseProportion - wallThickness, 0),
+                       new UVec3(baseProportion - wallThickness, 0, 0),
+                       new UVec3(-baseProportion + wallThickness, 0, 0)};
+                       
+  for (int i = 0; i < rectangles.length; i++) {
+    rectangles[i].translate(positions[i]);
+    model.add(rectangles[i]); 
+  }
 }
 
 int gridOffset(int d) {
-  return (baseProportion-wallThickness*2)*2*d;
+  return (baseProportion - wallThickness * 2) * 2 * d;
 }
 
 void build() {
   model = new UGeometry();
   for (int x = 0; x < gridSize; x++) {
     for (int y = 0; y < gridSize; y++) {
-      float randAngle = (pow(random(40, 65), 2))/65;
-      // steepness of the pyramd, using exponents to create more extreme height variation
-
+      float peakAngle = random(25, 65); // steepness of the pyramd
       model.translate(gridOffset(x), gridOffset(y), 0);
-      drawPyramid(baseProportion, randAngle);
-      drawPyramid(baseProportion - (wallThickness*2), randAngle); //FIX the angle
+      drawPyramid(baseProportion, peakAngle); // outer pyramid
+      drawPyramid(baseProportion - (wallThickness * 2), peakAngle); // inner
       drawBase();
       model.translate(gridOffset(-x), gridOffset(-y), 0); // reset it back to the center
     }
